@@ -1,5 +1,5 @@
 // DOM-free controller tests; not a substitute for browser visual QA.
-const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const vm=require('node:vm'),assert=require('node:assert/strict');
 const baseUrl=process.env.TEST_BASE_URL||'http://127.0.0.1:8876';
 const elements={};
 function element(id='') {return {id,value:'',style:{},dataset:{},children:[],className:'',textContent:'',disabled:false,checked:true,classList:{toggle(){}},setAttribute(){},removeAttribute(){},
@@ -11,16 +11,12 @@ const nav=['trend','state','portfolio','factors','ml','execution','text','market
 const views=['trend','state','portfolio','factors ml execution text'].map(k=>{const e=element(k);e.dataset.view=k;return e});
 const context=vm.createContext({document:{getElementById:id=>elements[id]??=(element(id)),querySelector:()=>null,querySelectorAll:q=>q==='[data-module]'?nav:q==='[data-view]'?views:[],createElement:()=>element(),hidden:false},devicePixelRatio:1,
  window:{addEventListener(){}},crypto:require('node:crypto').webcrypto,setInterval:()=>1,clearInterval(){},setTimeout,console,Blob,URL,URLSearchParams,AbortSignal,Date,fetch:(path,opt)=>fetch(baseUrl+path,opt)});
-vm.runInContext(fs.readFileSync('modules.js','utf8'),context);
-vm.runInContext(fs.readFileSync('advanced.js','utf8'),context);
-vm.runInContext(fs.readFileSync('workbench.js','utf8'),context);
-vm.runInContext(fs.readFileSync('operations.js','utf8'),context);
-vm.runInContext(fs.readFileSync('factor_validation.js','utf8'),context);
-vm.runInContext(fs.readFileSync('portfolio_optimization.js','utf8'),context);
-vm.runInContext(fs.readFileSync('regime_research.js','utf8'),context);
-vm.runInContext(fs.readFileSync('strategy_validation.js','utf8'),context);
-vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 (async()=>{
+ const page=await fetch(baseUrl+'/');assert.equal(page.status,200);
+ const html=await page.text(),scripts=[...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m=>m[1]);
+ assert.ok(scripts.length>=5,'HTML must list browser scripts');
+ for(const source of scripts){const response=await fetch(baseUrl+source);assert.equal(response.status,200,'script failed to load: '+source);vm.runInContext(await response.text(),context,{filename:source});}
+ assert.equal(await vm.runInContext('verifyServerCompatibility()',context),true,'test server must expose current APIs');
  const r=await fetch(baseUrl+'/api/history?demo=1');assert.equal(r.status,200);context.fixture=await r.json();
  vm.runInContext('data=fixture; index=data.frames.length-1; $("slider").min=20; $("slider").max=index; $("start").value=data.frames[20].date; $("end").value=data.frames.at(-1).date;render();seek(100);',context);
  assert.match(elements.mode.textContent,/回放/);assert.equal(elements.date.value,context.fixture.frames[100].date);

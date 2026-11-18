@@ -160,6 +160,19 @@ function drawEquity(){
  series.forEach((s,k)=>{c.strokeStyle=colors[k];c.lineWidth=k===2?2:1.3;c.beginPath();s.forEach((p,i)=>i?c.lineTo(x(i),y(p.value)):c.moveTo(x(i),y(p.value)));c.stroke();c.fillStyle=colors[k];c.fillText(labels[k],left+k*115,14);});
  c.fillStyle='#8793a5';c.fillText(btResult.start,left,h-5);c.textAlign='right';c.fillText(btResult.end,right,h-5);
 }
+async function verifyServerCompatibility(){
+ const banner=$('serviceCompatibility');if(!banner)return false;
+ try{
+  const r=await fetch('/api/version',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+  if(!r.ok)throw Error('旧版服务');
+  const version=await r.json();
+  if(!Number.isInteger(version.api_revision)||version.api_revision<2||!['factor-validation','portfolio-experiment','regime-research','strategy-validation'].every(name=>version.features?.includes(name)))throw Error('接口版本不匹配');
+  banner.hidden=true;return true;
+ }catch(e){
+  banner.textContent='页面代码已更新，但后台版本尚未确认匹配。基础页面仍可使用；新增分析功能需要在原终端按 Ctrl+C 停止旧服务，重新运行 python server.py，然后刷新页面。';
+  banner.hidden=false;return false;
+ }
+}
 wire();
 wireModules();
 wireAdvanced();
@@ -170,3 +183,4 @@ wireStrategyValidation();
 wireWorkbench();
 wireOperations();
 if(typeof location!=='undefined'){const selectedModule=new URLSearchParams(location.search).get('module');if(selectedModule&&moduleInfo[selectedModule])switchModule(selectedModule);}
+verifyServerCompatibility();

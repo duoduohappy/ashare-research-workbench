@@ -24,6 +24,10 @@
 3. 启动 `python server.py`，运行 `node test_ui.cjs`（需要 Node.js）。
 4. 运行 `python acceptance_ops.py`，执行独立环境的端到端验收。
 
+前端升级回归还需执行 `python build_ui.py --check`。启动服务后运行 `node test_browser_bootstrap.cjs` 与 `node test_browser_bootstrap.cjs --legacy-fixture`；前者验证当前接口兼容性，后者只提供旧版静态路由并隐藏新增接口，验证脚本引导、市场页渲染及明确重启提示。`test_ui.cjs` 也改为从 HTTP HTML 读取脚本清单、逐个通过 HTTP 加载，不再以本地文件导入绕过静态路由。
+
+这些检查覆盖升级期间“前端文件已更新、Python 进程仍为旧版”导致的新增脚本 404 和未定义函数问题；不等于已重启用户的后台进程，也不代表真实浏览器视觉验收完成。
+
 `OPERATIONS_ACCEPTANCE.json`、`LIVE_GATE_VALIDATION.json`、测试生成的数据库与快照属于本机运行产物，不随仓库发布。运行验收脚本可重新生成端到端记录。
 
 ## 证据边界

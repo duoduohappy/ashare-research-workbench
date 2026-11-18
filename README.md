@@ -100,6 +100,10 @@ python server.py
 
 升级已有安装时，重新安装依赖并重启 Python 服务，再刷新浏览器，以加载新增算法和接口。
 
+若页面提示后台版本不匹配，请在原服务终端按 `Ctrl+C` 停止旧服务，再运行 `python server.py` 或重新打开 `start.bat`。只刷新页面会更新前端文件，不会重载正在运行的 Python 接口。
+
+浏览器脚本已打包到既有的 `advanced.js` 入口，避免旧后台静态路由缺少新脚本时出现 `syncStrategyValidation is not defined` 等初始化错误。后台兼容性提示会保留到服务升级完成。
+
 ## 验证
 
 当前本机验证记录：**82 项单元测试通过，隔离 HTTP 接口与无浏览器界面逻辑测试通过**。这些结果验证实现与受控路径，不等于投资有效性、真实浏览器视觉或多周真实行情运行验收。
@@ -112,6 +116,8 @@ python -m unittest -v
 
 ```bash
 node test_ui.cjs
+node test_browser_bootstrap.cjs
+node test_browser_bootstrap.cjs --legacy-fixture
 ```
 
 隔离端到端验收：
@@ -123,6 +129,17 @@ python acceptance_ops.py
 验收脚本使用独立目录、端口和合成账户，不修改用户运营数据库。它会启动本地辅助进程，结束时关闭这些验收进程；生成的本机验收记录与运行目录不提交到仓库。
 
 测试范围、现有证据及尚未完成的验收见 [验证说明](docs/VALIDATION.md)。详细配置、计算口径和恢复步骤见 [使用说明](docs/USER_GUIDE.md)。
+
+## 前端开发
+
+日常使用无需构建；仓库包含可直接运行的脚本包。修改 `ui/advanced_core.js` 或因子、组合、状态、策略验收脚本后，执行：
+
+```bash
+python build_ui.py
+python build_ui.py --check
+```
+
+`advanced.js` 为生成文件，应修改对应源码并重新构建。新增界面模块应加入 `build_ui.py` 的来源清单；页面继续使用既有脚本入口。界面逻辑测试从 HTTP 页面读取并加载真实脚本引用，另以旧版静态路由模拟验证升级兼容性，不等同真实浏览器视觉验收。
 
 ## 主要限制
 

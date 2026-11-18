@@ -280,7 +280,9 @@ class Handler(BaseHTTPRequestHandler):
         args=urllib.parse.parse_qs(parsed.query)
         get=lambda key, default='': args.get(key,[default])[0]
         try:
-            if parsed.path=='/api/ops/backup-download':
+            if parsed.path=='/api/version':
+                self.send_json({'api_revision':2,'features':['factor-validation','portfolio-experiment','regime-research','strategy-validation']})
+            elif parsed.path=='/api/ops/backup-download':
                 path=backup_path(Runtime(DATA_ROOT),get('id'));body=path.read_bytes()
                 self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Disposition','attachment; filename="'+path.name+'"');self.end_headers();self.wfile.write(body)
             elif parsed.path=='/api/quote':
