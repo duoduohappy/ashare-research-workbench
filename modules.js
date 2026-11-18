@@ -23,6 +23,7 @@ function switchModule(name){
  syncOptimization();drawOptimization();
  syncRegime();drawRegime();
  syncStrategyValidation();drawStrategyValidation();
+ switchEvidence();drawEvidence();
  switchWorkbench();
  switchOperations();
 }

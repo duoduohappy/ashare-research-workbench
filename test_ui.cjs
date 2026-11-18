@@ -103,6 +103,25 @@ const context=vm.createContext({document:{getElementById:id=>elements[id]??=(ele
    assert.ok(elements.wbCharts.children.length>=2,kind+' must have charts');
  }
  console.log('PASS: eight workbench modules, chart generation, shared context and demo API');
+ (elements.evCodes??=element('evCodes')).value='600519,000001,300750,600036,000333,601318';elements.evKind.value='factor';
+ vm.runInContext('switchModule("quality")',context);
+ await vm.runInContext('captureEvidence()',context);
+ const firstEvidence=vm.runInContext('evView',context);assert.ok(firstEvidence,elements.evStatus.textContent);assert.equal(firstEvidence.rows.length,6);
+ await vm.runInContext('runEvidence()',context);
+ const savedEvidence=vm.runInContext('evRun',context);assert.ok(savedEvidence,elements.evStatus.textContent);
+ await vm.runInContext('replayEvidence()',context);
+ assert.equal(vm.runInContext('evCheck.status',context),'matched',elements.evStatus.textContent);
+ assert.equal(elements.evChecks.children[0].children.length,5);
+ vm.runInContext('seek(data.frames.length-11)',context);
+ await vm.runInContext('captureEvidence()',context);
+ const secondEvidence=vm.runInContext('evView',context);assert.notEqual(firstEvidence.id,secondEvidence.id);
+ elements.evCompareLeft.value=secondEvidence.id;elements.evCompareRight.value=firstEvidence.id;
+ await vm.runInContext('compareEvidence()',context);
+ const evidenceDiff=vm.runInContext('evComparison',context);assert.ok(evidenceDiff,elements.evStatus.textContent);
+ assert.ok(evidenceDiff.rows.every(r=>r.added===10&&r.changed===0));
+ vm.runInContext('seek(data.frames.length-1)',context);assert.equal(vm.runInContext('evView.asof',context),secondEvidence.asof,'frozen evidence must keep its own date');
+ const exportedEvidence=await vm.runInContext(`evidenceApi({action:'export_snapshot',snapshot_id:'${firstEvidence.id}'})`,context);assert.equal(exportedEvidence.payload.asof,firstEvidence.asof);
+ console.log('PASS: snapshot capture, frozen research, offline hash replay, version comparison and independent evidence dates');
  elements.svWindow.value='126';elements.svLimit.value='auto';
  vm.runInContext('switchModule("lab")',context);
  await vm.runInContext('runStrategyValidation()',context);

@@ -21,26 +21,31 @@ from factor_validation import factor_validation
 from portfolio_optimization import portfolio_experiment
 from regime_research import regime_experiment
 from strategy_validation import strategy_validation
+from research_evidence import EvidenceStore
 import extensions as ext
 from workbench_api import dispatch as workbench_dispatch
 from ops_engine import Runtime
 from ops_service import dispatch as ops_dispatch,start_worker
 from ops_storage import backup_path
 
-def extension_series(codes,end,is_demo):
-    if not 2<=len(codes)<=8 or len(set(codes))!=len(codes):raise ValueError('请输入 2–8 个不重复股票代码')
-    result={};stale=False
+def extension_histories(codes,end,is_demo,minimum=2):
+    if not isinstance(codes,list) or not minimum<=len(codes)<=8 or len(set(codes))!=len(codes):raise ValueError(f'请输入 {minimum}–8 个不重复股票代码')
+    result={}
     for code in codes:
         symbol_for(code)
         if is_demo:
-            rows=demo()['bars'];rng=random.Random(int(code));scale=1
+            h=demo();rows=h['bars'];rng=random.Random(int(code));scale=1
             for b in rows:
                 scale*=1+rng.gauss(0,.005)
                 for key in ('close','raw_close','raw_open','raw_high','raw_low'):b[key]*=scale
         else:
-            h=history(code);rows=h['bars'];stale=stale or h['stale']
-        result[code]=[b for b in rows if b['date']<=end]
-    return result,stale
+            h=history(code);rows=h['bars']
+        result[code]={**h,'bars':[b for b in rows if b['date']<=end]}
+    return result
+
+def extension_series(codes,end,is_demo):
+    histories=extension_histories(codes,end,is_demo)
+    return {c:h['bars'] for c,h in histories.items()},any(h['stale'] for h in histories.values())
 
 ROOT = Path(__file__).resolve().parent
 DATA_ROOT=ROOT
@@ -166,6 +171,20 @@ class Handler(BaseHTTPRequestHandler):
             path=urllib.parse.urlparse(self.path).path
             if path=='/api/ops':
                 self.send_json(ops_dispatch(body,Runtime(DATA_ROOT,quote_loader=quote)));return
+            if path=='/api/research-evidence':
+                store=EvidenceStore(DATA_ROOT);action=body.get('action','list')
+                if action=='list':result=store.inventory()
+                elif action=='capture':
+                    end=body.get('end','');datetime.fromisoformat(end)
+                    result=store.capture(extension_histories(body.get('codes',[]),end,body.get('demo') is True,minimum=1),end,body.get('demo') is True)
+                elif action=='view':result=store.snapshot_view(body.get('snapshot_id',''))
+                elif action=='run':result=store.run(body.get('snapshot_id',''),body.get('kind',''),body.get('config',{}))
+                elif action=='replay':result=store.replay(body.get('run_id',''))
+                elif action=='run_detail':result={'run_id':body.get('run_id',''),**store.read('runs',body.get('run_id',''))}
+                elif action=='compare':result=store.compare(body.get('left_id',''),body.get('right_id',''))
+                elif action=='export_snapshot':result=store.read('snapshots',body.get('snapshot_id',''))
+                else:raise ValueError('未知证据库操作')
+                self.send_json(result);return
             end=body.get('end','')
             from datetime import date
             date.fromisoformat(end)
@@ -281,7 +300,7 @@ class Handler(BaseHTTPRequestHandler):
         get=lambda key, default='': args.get(key,[default])[0]
         try:
             if parsed.path=='/api/version':
-                self.send_json({'api_revision':2,'features':['factor-validation','portfolio-experiment','regime-research','strategy-validation']})
+                self.send_json({'api_revision':3,'features':['factor-validation','portfolio-experiment','regime-research','strategy-validation','research-evidence']})
             elif parsed.path=='/api/ops/backup-download':
                 path=backup_path(Runtime(DATA_ROOT),get('id'));body=path.read_bytes()
                 self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Disposition','attachment; filename="'+path.name+'"');self.end_headers();self.wfile.write(body)

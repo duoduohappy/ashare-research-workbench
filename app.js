@@ -166,7 +166,7 @@ async function verifyServerCompatibility(){
   const r=await fetch('/api/version',{cache:'no-store',signal:AbortSignal.timeout(5000)});
   if(!r.ok)throw Error('旧版服务');
   const version=await r.json();
-  if(!Number.isInteger(version.api_revision)||version.api_revision<2||!['factor-validation','portfolio-experiment','regime-research','strategy-validation'].every(name=>version.features?.includes(name)))throw Error('接口版本不匹配');
+  if(!Number.isInteger(version.api_revision)||version.api_revision<3||!['factor-validation','portfolio-experiment','regime-research','strategy-validation','research-evidence'].every(name=>version.features?.includes(name)))throw Error('接口版本不匹配');
   banner.hidden=true;return true;
  }catch(e){
   banner.textContent='页面代码已更新，但后台版本尚未确认匹配。基础页面仍可使用；新增分析功能需要在原终端按 Ctrl+C 停止旧服务，重新运行 python server.py，然后刷新页面。';
@@ -180,6 +180,7 @@ wireFactorValidation();
 wireOptimization();
 wireRegime();
 wireStrategyValidation();
+wireEvidence();
 wireWorkbench();
 wireOperations();
 if(typeof location!=='undefined'){const selectedModule=new URLSearchParams(location.search).get('module');if(selectedModule&&moduleInfo[selectedModule])switchModule(selectedModule);}
