@@ -17,6 +17,7 @@ vm.runInContext(fs.readFileSync('workbench.js','utf8'),context);
 vm.runInContext(fs.readFileSync('operations.js','utf8'),context);
 vm.runInContext(fs.readFileSync('factor_validation.js','utf8'),context);
 vm.runInContext(fs.readFileSync('portfolio_optimization.js','utf8'),context);
+vm.runInContext(fs.readFileSync('regime_research.js','utf8'),context);
 vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 (async()=>{
  const r=await fetch(baseUrl+'/api/history?demo=1');assert.equal(r.status,200);context.fixture=await r.json();
@@ -105,6 +106,29 @@ vm.runInContext(fs.readFileSync('app.js','utf8'),context);
    assert.ok(elements.wbCharts.children.length>=2,kind+' must have charts');
  }
  console.log('PASS: eight workbench modules, chart generation, shared context and demo API');
+ elements.regWindow.value='126';elements.regThreshold.value='5';
+ vm.runInContext('switchModule("state");seek(data.frames.length-1)',context);
+ await vm.runInContext('runRegime()',context);
+ assert.equal(elements.regResults.hidden,false,elements.regStatus.textContent);
+ assert.equal(elements.regMetrics.children.length,4);assert.equal(elements.regComparison.children[0].children.length,4);
+ assert.match(elements.regInsight.textContent,/不是同一个量/);
+ const regimes=vm.runInContext('regimeResult',context);
+ assert.equal(regimes.folds[0].model_parameters.hmm.means.length,3);
+ for(const k of Object.keys(regimes.results)){
+   const observations=regimes.results[k].observations;
+   assert.equal(observations.at(-1).actual,null);
+   assert.ok(observations.every(r=>r.train_end<r.date));
+ }
+ elements.regWindow.value='252';vm.runInContext('syncRegime()',context);assert.equal(elements.regResults.hidden,true);
+ elements.regWindow.value='126';
+ const regimeLiveFetch=context.fetch;let releaseRegime;
+ context.fetch=(path,opt)=>new Promise((resolve,reject)=>{releaseRegime=()=>regimeLiveFetch(path,opt).then(resolve,reject);});
+ const pendingRegime=vm.runInContext('runRegime()',context);
+ vm.runInContext('seek(100)',context);releaseRegime();await pendingRegime;context.fetch=regimeLiveFetch;
+ assert.equal(elements.regResults.hidden,true,'late HMM response must not restore stale results');
+ assert.equal((await fetch(baseUrl+'/regime_research.js')).status,200);
+ const invalidRegime=await fetch(baseUrl+'/api/regime-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'600519',end:context.fixture.frames.at(-1).date,demo:true,lookback:63})});assert.equal(invalidRegime.status,400);
+ console.log('PASS: three regime models, diagnostic charts, pending labels and late-response invalidation');
  vm.runInContext('switchModule("operations")',context);await vm.runInContext('refreshOperations(true)',context);
  assert.ok(elements.opsCharts.children.length>=4);assert.match(elements.moduleTitle.textContent,/持续模拟/);
  console.log('PASS: operations monitoring, lifecycle and PnL chart rendering');

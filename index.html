@@ -35,7 +35,26 @@
 <div class="grid" data-view="state"><section class="panel"><div class="section-title"><h3>状态转移矩阵</h3><span class="muted">当前 → 下一交易日</span></div><div id="matrix" class="matrix"></div><p class="note">每行合计 100%。采用 0.5 平滑，避免未出现状态产生无效概率。</p></section>
 <section class="panel"><h3>下一交易日状态概率</h3><div id="probabilities" class="probabilities"></div><h3 class="stationary-title">长期状态分布</h3><div id="mix" class="mix"></div><p class="note">基于截至所选日期的历史估计；长期分布不代表尾部风险或未来保证。</p></section></div>
 <section class="panel" data-view="trend" id="trendMethods"><h3>趋势与反转观察</h3><div class="method-grid"><div>前 20 日收盘区间突破<strong id="breakoutValue">—</strong><small>只与前 20 日比较，不使用当前日更新边界。</small></div><div>相对 MA20 的标准分<strong id="reversionValue">—</strong><small>价格距均值的标准差倍数；偏离不保证回归。</small></div></div><p class="note">均线、动量用于上方回测；突破与标准分仅为描述指标，尚未作为独立交易策略回测。</p></section>
-<section class="panel" data-view="state"><h3>模型方法</h3><p class="note">已接入：可观测三状态马尔可夫链。HMM 与聚类尚未接入，当前概率均来自马尔可夫模型。</p></section>
+<section class="panel regime-lab" data-view="state">
+<div class="section-title"><div><p class="eyebrow">REGIME EVIDENCE</p><h3>状态算法对照 · HMM / 聚类 / 阈值马尔可夫</h3></div><span id="regScope" class="badge">共享标的与查看日期</span></div>
+<p class="note">学习当日收益、20 日动量与波动特征，比较后续样本表现。隐状态只是模型分组，不是真实牛熊标签。HMM 在测试期仅作逐日过滤，不用未来观测回填过去状态。</p>
+<div class="wb-form-grid"><label>训练窗口<select id="regWindow"><option value="126">126 个观测日</option><option value="252">252 个观测日</option></select></label><label>阈值马尔可夫的 20 日动量阈值 · %<input id="regThreshold" type="number" value="5" min="0.1" max="50" step="0.1"></label></div>
+<p class="note">每 42 个信号日重训，展示最近最多六折。此处阈值马尔可夫在每折训练窗估计转移矩阵，与上方主图的扩展计数口径分开。默认至少需要 189 根日线。</p>
+<div class="bt-actions"><button id="regRun" class="primary">运行状态对照与样本外检验</button><button id="regExport">导出状态、预测与训练边界</button><span id="regStatus" role="status" class="muted"></span></div>
+<div id="regResults" hidden><div id="regMetrics" class="wb-kpis"></div><div class="wb-charts">
+<section class="wb-chart-card wide"><h3>最近 120 日状态对照 · 绿为弱动量特征、浅色为中间、红为强动量特征</h3><canvas id="regTimelineChart" role="img" aria-label="三种方法的逐日状态热力图"></canvas></section>
+<section class="wb-chart-card wide"><h3>HMM 当日过滤状态分布（%）· 不是涨跌概率</h3><canvas id="regProbabilityChart" role="img" aria-label="HMM 仅使用当日及此前观测的过滤状态概率"></canvas></section>
+<section class="wb-chart-card"><h3>最新 HMM 训练转移矩阵（%）</h3><canvas id="regTransitionChart" role="img" aria-label="HMM 最新训练窗口转移矩阵"></canvas></section>
+<section class="wb-chart-card"><h3>下一日上涨事件 Brier · 越低越好</h3><canvas id="regBrierChart" role="img" aria-label="三种模型与训练无条件基线的样本外 Brier 分数"></canvas></section>
+<section class="wb-chart-card wide"><h3>训练状态特征 · HMM / KMeans 按训练 20 日动量中心排序</h3><canvas id="regFeaturesChart" role="img" aria-label="三种算法各状态的训练特征均值"></canvas></section>
+<section class="wb-chart-card"><h3>样本外概率可靠性 · 对角线为理想校准</h3><canvas id="regCalibrationChart" role="img" aria-label="预测上涨概率与实际上涨频率分箱对照"></canvas></section>
+<section class="wb-chart-card"><h3>各状态后的平均下一日收益（%）· 描述性分组</h3><canvas id="regReturnsChart" role="img" aria-label="三种算法各状态后的平均下一日收益"></canvas></section>
+</div><div id="regInsight" class="message"></div><h3>共同样本与共同预测目标的对照</h3><div id="regComparison" class="table-scroll"></div>
+<details open><summary>训练边界、HMM 收敛与参数诊断</summary><div id="regFoldTable" class="table-scroll"></div></details>
+<details><summary>逐日状态、预测和下一标签</summary><div id="regRecords" class="table-scroll"></div></details>
+<details open><summary>概率含义、评估与研究限制</summary><p id="regNotes" class="note"></p></details>
+</div></section>
+
 <section class="panel" id="portfolioPanel" data-view="portfolio"><div class="section-title"><h3>自选组合研究</h3><span class="badge">共享当前查看日期</span></div><p class="note">输入 2–8 只股票及初始权重。权重合计不足 100% 的部分保留现金；比较固定初始配置的持有表现与当前风险。</p>
 <label>每行：六位股票代码，初始权重 %<textarea id="portfolioInput" rows="4" spellcheck="false">600519,30
 000001,30
@@ -112,4 +131,4 @@
 <div class="panel ops-maintenance"><h3>后台运行、备份与恢复</h3><div class="bt-actions"><button id="opsRefresh">刷新监控</button><button id="opsStartWorker">启动后台进程</button><button id="opsStopWorker">结束后台进程</button><button id="opsScheduler">暂停全部新任务</button><button id="opsBackup">立即创建校验备份</button></div><div class="ops-actions"><label>已有备份<select id="opsBackupSelect"><option value="">请选择备份</option></select></label><button id="opsDownload">下载备份</button><button id="opsRestore">恢复到隔离副本并校验</button></div><p class="note">独立进程在浏览器关闭后继续运行，但电脑关机或断网时不能运行。暂停调度阻止新任务，正在执行的任务会完成；暂停策略会在当前日事务完成后停止推进。恢复演练不覆盖当前数据库，恢复副本默认关闭调度，须核对后再启用。每天首次成功任务后自动备份；有新模拟日事务提交时追加备份。</p><div id="opsRecovery" class="message" hidden></div></div>
 <p id="opsLimitations" class="note"></p></section>
 <section class="panel details" data-view="trend state portfolio factors ml execution text market rotation watch finance events lab paper quality"><details><summary>计算口径与使用限制</summary><p>用过去 N 个交易日的累计收益划分状态：高于正阈值为牛市，低于负阈值为熊市，其余为震荡。回放时逐日重估矩阵，不读取选定日期之后的价格或标签。</p><p>真实日线采用后复权价格，实时卡片显示未复权报价，两者不直接拼接。当天日线最早在北京时间 15:10 后纳入，实际以数据源更新为准。盘中只刷新报价，确认状态使用已收盘日线。</p><p>回测以原始开盘价执行，约束 T+1、最小申报数量、零成交量及近似涨跌停；缺少日线的停牌日无成交。科创板按至少 200 股、之后 1 股递增，其余按 100 股。沪深 A 股卖出印花税按 2023-08-28 前后税率切换，过户费按 2022-04-29 前后切换。佣金与滑点为可修改假设；佣金视为已含其他经手规费。期末不强平，收益含持仓市值。</p><p>历史数据是供应商当前提供的修订版本，不是逐日保存的数据快照，因此回放不等于严格的历史数据版本复原。公共行情接口没有延迟或可用性保证。回测缺少盘口排队、真实公司行动与分红税，结果仅供策略研究，不构成投资建议。</p></details><div class="footer-row"><span id="source">数据源：—</span><button id="export" class="text-button">导出截至当前日的数据 ↓</button></div><small id="fetched">—</small></section>
-</main></div><script src="/modules.js"></script><script src="/advanced.js"></script><script src="/workbench.js"></script><script src="/operations.js"></script><script src="/factor_validation.js"></script><script src="/portfolio_optimization.js"></script><script src="/app.js"></script></body></html>
+</main></div><script src="/modules.js"></script><script src="/advanced.js"></script><script src="/workbench.js"></script><script src="/operations.js"></script><script src="/factor_validation.js"></script><script src="/portfolio_optimization.js"></script><script src="/regime_research.js"></script><script src="/app.js"></script></body></html>

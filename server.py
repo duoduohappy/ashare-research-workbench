@@ -19,6 +19,7 @@ from research import indicators,backtest
 from portfolio import portfolio
 from factor_validation import factor_validation
 from portfolio_optimization import portfolio_experiment
+from regime_research import regime_experiment
 import extensions as ext
 from workbench_api import dispatch as workbench_dispatch
 from ops_engine import Runtime
@@ -172,6 +173,13 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/workbench':
                 if body.get('action') in ('save','add') and (DATA_ROOT/'.operations-maintenance').exists():raise ValueError('维护中，暂不写入本地账本')
                 self.send_json(workbench_dispatch(body,{'symbol':symbol_for,'history':history,'demo':demo,'news':ext.news,'root':DATA_ROOT}))
+            elif path=='/api/regime-research':
+                code=body.get('code','600519');symbol_for(code)
+                h=demo() if is_demo else history(code)
+                from threadpoolctl import threadpool_limits
+                with threadpool_limits(limits=1):
+                    result=regime_experiment(h['bars'],end,body.get('lookback',126),float(body.get('threshold',.05)))
+                self.send_json({**result,'code':code,'demo':is_demo,'stale':h['stale']})
             elif path=='/api/portfolio-experiment':
                 series,stale=extension_series(body.get('codes',[]),end,is_demo)
                 from threadpoolctl import threadpool_limits
@@ -304,7 +312,7 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     for frame,extra in zip(frames,indicators(data['bars'])):frame.update(extra)
                     self.send_json({**data,'frames':frames,'demo':get('demo')=='1'})
-            elif parsed.path in ('/','/index.html','/app.js','/modules.js','/advanced.js','/workbench.js','/operations.js','/factor_validation.js','/portfolio_optimization.js','/style.css'):
+            elif parsed.path in ('/','/index.html','/app.js','/modules.js','/advanced.js','/workbench.js','/operations.js','/factor_validation.js','/portfolio_optimization.js','/regime_research.js','/style.css'):
                 name='index.html' if parsed.path=='/' else parsed.path[1:]
                 body=(ROOT/name).read_bytes()
                 self.send_response(200)
