@@ -166,6 +166,7 @@ wireAdvanced();
 wireFactorValidation();
 wireOptimization();
 wireRegime();
+wireStrategyValidation();
 wireWorkbench();
 wireOperations();
 if(typeof location!=='undefined'){const selectedModule=new URLSearchParams(location.search).get('module');if(selectedModule&&moduleInfo[selectedModule])switchModule(selectedModule);}

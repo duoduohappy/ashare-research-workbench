@@ -22,11 +22,13 @@ function switchModule(name){
  syncFactorValidation();drawFactorValidation();
  syncOptimization();drawOptimization();
  syncRegime();drawRegime();
+ syncStrategyValidation();drawStrategyValidation();
  switchWorkbench();
  switchOperations();
 }
 function invalidatePortfolio(){portfolioSerial++;portfolioResult=null;portfolioAsOf='';$('portfolioResults').hidden=true;$('portfolioStatus').textContent='组合配置或共享数据已变化，请重新分析';}
 function syncModules(frame){
+ syncStrategyValidation();
  syncRegime();
  syncOptimization();
  $('breakoutValue').textContent=frame.breakout20==null?'历史不足 20 日':frame.breakout20===1?'向上突破':frame.breakout20===-1?'跌破区间':'仍在区间内';

@@ -20,6 +20,7 @@ from portfolio import portfolio
 from factor_validation import factor_validation
 from portfolio_optimization import portfolio_experiment
 from regime_research import regime_experiment
+from strategy_validation import strategy_validation
 import extensions as ext
 from workbench_api import dispatch as workbench_dispatch
 from ops_engine import Runtime
@@ -173,6 +174,14 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/workbench':
                 if body.get('action') in ('save','add') and (DATA_ROOT/'.operations-maintenance').exists():raise ValueError('维护中，暂不写入本地账本')
                 self.send_json(workbench_dispatch(body,{'symbol':symbol_for,'history':history,'demo':demo,'news':ext.news,'root':DATA_ROOT}))
+            elif path=='/api/strategy-validation':
+                code=body.get('code','600519');symbol_for(code)
+                h=demo() if is_demo else history(code)
+                limit=body.get('limit','auto')
+                limit=(.2 if code.startswith(('300','301','688')) else .1) if limit=='auto' else float(limit)
+                result=strategy_validation(h['bars'],end,code,body.get('window',20),float(body.get('threshold',.05)),
+                    body.get('lookback',126),body.get('periods'),body.get('momenta'),float(body.get('capital',300000)),body.get('filtered',True),limit)
+                self.send_json({**result,'demo':is_demo,'stale':h['stale']})
             elif path=='/api/regime-research':
                 code=body.get('code','600519');symbol_for(code)
                 h=demo() if is_demo else history(code)
@@ -312,7 +321,7 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     for frame,extra in zip(frames,indicators(data['bars'])):frame.update(extra)
                     self.send_json({**data,'frames':frames,'demo':get('demo')=='1'})
-            elif parsed.path in ('/','/index.html','/app.js','/modules.js','/advanced.js','/workbench.js','/operations.js','/factor_validation.js','/portfolio_optimization.js','/regime_research.js','/style.css'):
+            elif parsed.path in ('/','/index.html','/app.js','/modules.js','/advanced.js','/workbench.js','/operations.js','/factor_validation.js','/portfolio_optimization.js','/regime_research.js','/strategy_validation.js','/style.css'):
                 name='index.html' if parsed.path=='/' else parsed.path[1:]
                 body=(ROOT/name).read_bytes()
                 self.send_response(200)

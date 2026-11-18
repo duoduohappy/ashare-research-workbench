@@ -52,20 +52,20 @@ def metrics(equity,initial):
             'max_drawdown':dd,'volatility':vol,
             'sharpe':statistics.mean(rets)*252/vol if vol and vol>0 else None}
 
-def backtest(bars,frames,code,window=20,start='',end='',capital=100000,commission=.0003,min_fee=5,slippage=.001,limit=.1,trend_period=60,momentum_period=20):
+def backtest(bars,frames,code,window=20,start='',end='',capital=100000,commission=.0003,min_fee=5,slippage=.001,limit=.1,trend_period=60,momentum_period=20,signal_lag=1):
+    if type(signal_lag) is not int or signal_lag not in (1,2):raise ValueError('信号滞后仅支持 1 或 2 个观测日')
     if not 5<=trend_period<=120 or not 5<=momentum_period<=120:raise ValueError('均线和动量周期应在 5–120 之间')
     for v in (capital,commission,min_fee,slippage,limit):
         if not math.isfinite(v):raise ValueError('回测参数必须为有限数字')
     if not 1000<=capital<=1e9 or not 0<=commission<=.01 or not 0<=min_fee<=100 or not 0<=slippage<=.03 or limit not in (.05,.1,.2):
         raise ValueError('回测资金或费用参数超出范围')
     if start and end and start>end:raise ValueError('回测起点不能晚于终点')
-    first=max(window+253,trend_period+1,momentum_period+1)
+    first=max(window+252+signal_lag,trend_period+signal_lag,momentum_period+signal_lag)
     selected=[i for i in range(first,len(bars)) if (not start or bars[i]['date']>=start) and (not end or bars[i]['date']<=end)]
     if len(selected)<2:raise ValueError('回测区间不足：需要至少 252 个历史转移样本及两个回测交易日')
     if any(not all(k in bars[i] for k in ('raw_open','raw_close','raw_high','raw_low','volume')) for i in range(selected[0]-1,selected[-1]+1)):
         raise ValueError('缓存缺少原始 OHLC 和成交量，请重新加载真实行情后回测')
     minimum,step=(200,1) if code.startswith('688') else (100,100)
-    ind=indicators(bars)
     results={}
     for strategy in ('hold','trend','filtered'):
         cash=capital;units=0;buy_day='';eq=[];trades=[];blocked=[];corporate=0
@@ -76,8 +76,9 @@ def backtest(bars,frames,code,window=20,start='',end='',capital=100000,commissio
             # Economic units are held in the adjusted price basis. Corporate
             # actions imply reinvestment, not an exact cash-dividend ledger.
             rawshares=units*factor
-            f=frames[i-1];average=statistics.mean(x['close'] for x in bars[i-trend_period:i]);momentum=prev['close']/bars[i-1-momentum_period]['close']-1
-            trend=prev['close']>average and momentum>0
+            signal_index=i-signal_lag;signal_bar=bars[signal_index]
+            f=frames[signal_index];average=statistics.mean(x['close'] for x in bars[signal_index-trend_period+1:signal_index+1]);momentum=signal_bar['close']/bars[signal_index-momentum_period]['close']-1
+            trend=signal_bar['close']>average and momentum>0
             target=True if strategy=='hold' else trend and (strategy!='filtered' or f['signal']>0)
             action='buy' if target and not units else 'sell' if not target and units else None
             if action:
@@ -99,15 +100,15 @@ def backtest(bars,frames,code,window=20,start='',end='',capital=100000,commissio
                     if n>=minimum:
                         cost=n*execution;fees=fee(cost,day,False,commission,min_fee)
                         cash-=cost+fees;units=n/factor;buy_day=day
-                        trades.append({'date':day,'signal_date':prev['date'],'side':'买入','quantity':n,'price':execution,'fees':fees})
+                        trades.append({'date':day,'signal_date':signal_bar['date'],'side':'买入','quantity':n,'price':execution,'fees':fees})
                     else:blocked.append({'date':day,'side':action,'reason':'资金不足最小买入数量'})
                 else:
                     value=rawshares*execution;fees=fee(value,day,True,commission,min_fee)
                     cash+=value-fees;units=0
-                    trades.append({'date':day,'signal_date':prev['date'],'side':'卖出','quantity':rawshares,'price':execution,'fees':fees})
+                    trades.append({'date':day,'signal_date':signal_bar['date'],'side':'卖出','quantity':rawshares,'price':execution,'fees':fees})
             eq.append({'date':day,'value':cash+units*b['close']})
         results[strategy]={'equity':eq,'metrics':metrics(eq,capital),'trades':trades,'blocked':blocked,'corporate_events':corporate,
                            'fees':sum(t['fees'] for t in trades),'open_position':units>0}
     return {'results':results,'start':bars[selected[0]]['date'],'end':bars[selected[-1]]['date'],
-            'params':{'capital':capital,'commission':commission,'min_fee':min_fee,'slippage':slippage,'limit':limit,'minimum':minimum,'step':step},
-            'caveat':'研究回测：前日收盘信号、次日开盘成交，只做多或空仓。涨跌停按所选固定比例近似，缺少历史 ST/IPO 特别规则；开盘封板保守跳过。停牌缺行期间不成交，波动和夏普按可得日线 252 年化，长停牌会影响可比性；年化收益按自然日计算。复权隐含红利再投资及等价持股，未逐笔处理分红税和公司行动，不是账户对账收益。期末持仓按收盘估值，不强制卖出。'}
+            'params':{'capital':capital,'commission':commission,'min_fee':min_fee,'slippage':slippage,'limit':limit,'minimum':minimum,'step':step,'signal_lag':signal_lag},
+            'caveat':f'研究回测：使用 {signal_lag} 个观测日前的收盘信号、当日开盘成交，只做多或空仓。涨跌停按所选固定比例近似，缺少历史 ST/IPO 特别规则；开盘封板保守跳过。停牌缺行期间不成交，波动和夏普按可得日线 252 年化，长停牌会影响可比性；年化收益按自然日计算。复权隐含红利再投资及等价持股，未逐笔处理分红税和公司行动，不是账户对账收益。期末持仓按收盘估值，不强制卖出。'}

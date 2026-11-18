@@ -47,11 +47,17 @@ function renderOpsReport(){
  const v=report.value;$('opsReportSummary').textContent=report.day+' · 净资产 '+wbFmt(v.account.equity)+' 元 · 现金 '+wbFmt(v.account.cash)+' 元 · 费用 '+wbFmt(v.fees)+' 元 · 归因核对差额 '+wbFmt(v.reconciliation_difference)+' 元';
  tableAt('opsReportDecisions',['股票','信号日期','动量','状态信号','方向','结果','股数','模拟价格','费用','原因'],v.decisions.map(r=>[r.code,r.signal?.date||'—',r.signal?pct(r.signal.momentum):'—',r.signal?.markov_signal?.toFixed(3)||'—',r.side,{filled:'模拟成交',rejected:'受阻',no_order:'不委托'}[r.status],r.qty||0,r.price?wbFmt(r.price):'—',wbFmt(r.fees||0),r.reason]));
 }
-async function refreshOperations(quiet=false){try{const d=await opsApi({action:'status'});opsRender(d);if(!quiet)opsMessage('运营状态已刷新。共 '+d.strategies.length+' 个版本；后台'+(d.worker_alive?'在线':'尚未在线')+'。');}catch(e){if(!quiet)opsMessage(e.message,true);}}
+let opsStatusPending=null;
+async function refreshOperations(quiet=false,afterChange=false){
+ if(afterChange&&opsStatusPending){try{await opsStatusPending;}catch{}}
+ if(!opsStatusPending)opsStatusPending=opsApi({action:'status'}).then(d=>{opsRender(d);return d;}).finally(()=>{opsStatusPending=null;});
+ try{const d=await opsStatusPending;if(!quiet)opsMessage('运营状态已刷新。共 '+d.strategies.length+' 个版本；后台'+(d.worker_alive?'在线':'尚未在线')+'。');return d;}
+ catch(e){if(!quiet||!opsData)opsMessage(e.message,true);}
+}
 function switchOperations(){if(activeModule==='operations'){pause();$('mode').textContent='本地运营';refreshOperations(true);}else $('mode').textContent=data?(data.demo?(live?'演示数据':'演示回放'):(live?'最新行情':'历史回放')):'等待加载';}
 async function opsAction(body,onSuccess){
  if(opsBusy)return;opsBusy=true;opsMessage('正在处理…');
- try{const d=await opsApi(body);if(onSuccess)await onSuccess(d);else opsMessage('操作完成。');await refreshOperations(true);}
+ try{const d=await opsApi(body);if(onSuccess)await onSuccess(d);else opsMessage('操作完成。');await refreshOperations(true,true);}
  catch(e){opsMessage(e.name==='TimeoutError'?'请求超时，任务可能仍在后台执行；请刷新队列，避免重复提交。':e.message,true);}
  finally{opsBusy=false;}
 }
