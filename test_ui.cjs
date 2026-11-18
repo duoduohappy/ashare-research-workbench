@@ -1,5 +1,6 @@
 // DOM-free controller tests; not a substitute for browser visual QA.
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const baseUrl=process.env.TEST_BASE_URL||'http://127.0.0.1:8876';
 const elements={};
 function element(id='') {return {id,value:'',style:{},dataset:{},children:[],className:'',textContent:'',disabled:false,checked:true,classList:{toggle(){}},setAttribute(){},removeAttribute(){},
   append(x){this.children.push(x)},replaceChildren(){this.children=[]},reportValidity(){return true},addEventListener(){},
@@ -9,14 +10,15 @@ elements.window.value='20';elements.threshold.value='5';elements.code.value='600
 const nav=['trend','state','portfolio','factors','ml','execution','text','market','rotation','watch','finance','events','lab','paper','quality','operations'].map(k=>{const e=element(k);e.dataset.module=k;return e});
 const views=['trend','state','portfolio','factors ml execution text'].map(k=>{const e=element(k);e.dataset.view=k;return e});
 const context=vm.createContext({document:{getElementById:id=>elements[id]??=(element(id)),querySelector:()=>null,querySelectorAll:q=>q==='[data-module]'?nav:q==='[data-view]'?views:[],createElement:()=>element(),hidden:false},devicePixelRatio:1,
- window:{addEventListener(){}},crypto:require('node:crypto').webcrypto,setInterval:()=>1,clearInterval(){},setTimeout,console,Blob,URL,URLSearchParams,AbortSignal,Date,fetch:(path,opt)=>fetch('http://127.0.0.1:8876'+path,opt)});
+ window:{addEventListener(){}},crypto:require('node:crypto').webcrypto,setInterval:()=>1,clearInterval(){},setTimeout,console,Blob,URL,URLSearchParams,AbortSignal,Date,fetch:(path,opt)=>fetch(baseUrl+path,opt)});
 vm.runInContext(fs.readFileSync('modules.js','utf8'),context);
 vm.runInContext(fs.readFileSync('advanced.js','utf8'),context);
 vm.runInContext(fs.readFileSync('workbench.js','utf8'),context);
 vm.runInContext(fs.readFileSync('operations.js','utf8'),context);
+vm.runInContext(fs.readFileSync('factor_validation.js','utf8'),context);
 vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 (async()=>{
- const r=await fetch('http://127.0.0.1:8876/api/history?demo=1');assert.equal(r.status,200);context.fixture=await r.json();
+ const r=await fetch(baseUrl+'/api/history?demo=1');assert.equal(r.status,200);context.fixture=await r.json();
  vm.runInContext('data=fixture; index=data.frames.length-1; $("slider").min=20; $("slider").max=index; $("start").value=data.frames[20].date; $("end").value=data.frames.at(-1).date;render();seek(100);',context);
  assert.match(elements.mode.textContent,/回放/);assert.equal(elements.date.value,context.fixture.frames[100].date);
  assert.match(elements.chartCaption.textContent,new RegExp(context.fixture.frames[100].date));
@@ -45,6 +47,29 @@ vm.runInContext(fs.readFileSync('app.js','utf8'),context);
  const inputs={candidatePool:'600519,000001,300750',factorWeights:'1,1,1,1,1,1',financialCsv:'',mlMethod:'ridge',execMethod:'twap',execSide:'buy',execQuantity:'10000',execParticipation:'10',execSlippage:'1',minuteCsv:'',analysisText:'公司营业收入增长 20%，净利润改善，同时提示市场风险，拟回购股份 100 万股。',localModel:''};
  for(const [id,value] of Object.entries(inputs))(elements[id]??=element(id)).value=value;
  for(const kind of ['factors','ml','execution','text']){await vm.runInContext(`runAdvanced('${kind}')`,context);assert.equal(elements[kind+'Result'].hidden,false,elements[kind+'Status'].textContent);}
+ vm.runInContext('switchModule("ml")',context);assert.equal(elements.mlFolds.children[0].children.length,4);
+ elements.fvFactor.value='momentum20';elements.fvHorizon.value='5';
+ await vm.runInContext('runFactorValidation()',context);
+ assert.equal(elements.fvResults.hidden,true);assert.match(elements.fvStatus.textContent,/5–8/);
+ elements.candidatePool.value='600519,000001,300750,600036,000333,601318';
+ vm.runInContext('switchModule("factors")',context);
+ await vm.runInContext('runFactorValidation()',context);
+ assert.equal(elements.fvResults.hidden,false,elements.fvStatus.textContent);
+ assert.equal(elements.fvMetrics.children.length,4);assert.ok(elements.fvFolds.children[0].children.length>1);
+ assert.ok(elements.fvObservations.children[0].children.length>200);
+ elements.fvHorizon.value='20';await vm.runInContext('runFactorValidation()',context);
+ const heldOut=vm.runInContext('factorValidationResult.folds.flatMap(f=>f.observations)',context);
+ for(let i=1;i<heldOut.length;i++)assert.ok(heldOut[i-1].label_end<=heldOut[i].date,'HTTP result test labels overlap');
+ const staticScript=await fetch(baseUrl+'/factor_validation.js');assert.equal(staticScript.status,200);
+ const badRequest=await fetch(baseUrl+'/api/factor-validation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codes:elements.candidatePool.value.split(','),end:context.fixture.frames.at(-1).date,demo:true,horizon:5.5})});assert.equal(badRequest.status,400);
+ vm.runInContext('seek(300)',context);assert.equal(elements.fvResults.hidden,true);
+ vm.runInContext('seek(data.frames.length-1)',context);
+ const liveFetch=context.fetch;let release;
+ context.fetch=(path,opt)=>new Promise((resolve,reject)=>{release=()=>liveFetch(path,opt).then(resolve,reject);});
+ const pending=vm.runInContext('runFactorValidation()',context);
+ vm.runInContext('seek(300)',context);release();await pending;context.fetch=liveFetch;
+ assert.equal(elements.fvResults.hidden,true,'old-date response must stay hidden');
+ console.log('PASS: factor IC, groups, decay, fold rendering, minimum pool and late-response invalidation');
  vm.runInContext('seek(300)',context);for(const kind of ['factors','ml','execution','text'])assert.equal(elements[kind+'Result'].hidden,true);
  vm.runInContext('seek(data.frames.length-1)',context);
  const wbInputs={wbCodes:'600519,000001,300750',wbMomentum:'-100',wbVolatility:'100',wbDrawdown:'100',wbEventCsv:'',wbPeriods:'20,60',wbMomenta:'20',wbLabCapital:'300000'};

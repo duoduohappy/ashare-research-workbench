@@ -20,6 +20,13 @@ class ExtensionTests(unittest.TestCase):
         self.assertEqual(a,b)
         for row in a['validation']:self.assertLess(row['train_label_end'],row['date'])
         self.assertTrue(a['validation_samples']>0)
+        self.assertEqual(len(a['folds']),3)
+        for fold in a['folds']:
+            self.assertLess(fold['train_label_end'],fold['test_start'])
+            self.assertLessEqual(fold['test_label_end'],self.bars[399]['date'])
+            rows=[r for r in a['validation'] if r['fold']==fold['fold']]
+            self.assertAlmostEqual(fold['mae'],sum(abs(r['prediction']-r['actual']) for r in rows)/len(rows))
+            self.assertEqual(fold['test_samples'],len(rows))
 
     def test_execution_capacity_and_conservation(self):
         rows=minute_data('600519',self.end,True)

@@ -19,6 +19,7 @@ function switchModule(name){
  // Navigation preserves shared symbol, date, replay progress and parameters.
  if(data){draw();if(activeModule==='trend')drawEquity();if(activeModule==='portfolio')drawPortfolio();}
  drawAdvanced();
+ syncFactorValidation();drawFactorValidation();
  switchWorkbench();
  switchOperations();
 }

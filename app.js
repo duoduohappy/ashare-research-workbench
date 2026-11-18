@@ -163,6 +163,7 @@ function drawEquity(){
 wire();
 wireModules();
 wireAdvanced();
+wireFactorValidation();
 wireWorkbench();
 wireOperations();
 if(typeof location!=='undefined'){const selectedModule=new URLSearchParams(location.search).get('module');if(selectedModule&&moduleInfo[selectedModule])switchModule(selectedModule);}

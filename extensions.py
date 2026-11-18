@@ -64,18 +64,29 @@ def machine_learning(series,end,method):
     def model():
         m=Ridge(alpha=10) if method=='ridge' else RandomForestRegressor(n_estimators=60,max_depth=4,min_samples_leaf=15,random_state=42,n_jobs=1) if method=='forest' else HistGradientBoostingRegressor(max_iter=60,max_leaf_nodes=7,l2_regularization=10,random_state=42)
         return make_pipeline(StandardScaler(),m)
-    by_code={code:features(bars,end) for code,bars in series.items()}
+    from factor_validation import correlation,mean
+    by_code={code:[dict(r,code=code) for r in features(bars,end)] for code,bars in series.items()}
     if any(len(v)<200 for v in by_code.values()):raise ValueError('每只股票至少需要约 260 根已收盘日线')
     pool=[r for vals in by_code.values() for r in vals if r['y'] is not None]
     dates=sorted(set(r['date'] for r in pool));dates=dates[-312:]
-    validation=[]
+    validation=[];folds=[]
     for offset in (60,40,20):
         test_dates=dates[-offset:][:20];start=test_dates[0]
         train=[r for r in pool if r['label_end']<start and r['date']>=dates[max(0,len(dates)-offset-252)]]
         test=[r for r in pool if r['date'] in test_dates]
         if len(train)<100:raise ValueError('隔离未来标签后训练样本不足')
         m=model();m.fit([r['x'] for r in train],[r['y'] for r in train]);pred=m.predict([r['x'] for r in test]);base=statistics.mean(r['y'] for r in train)
-        validation.extend({'date':r['date'],'label_end':r['label_end'],'actual':r['y'],'prediction':float(p),'baseline':base,'train_label_end':max(t['label_end'] for t in train)} for r,p in zip(test,pred))
+        fold_rows=[{'code':r['code'],'fold':len(folds)+1,'date':r['date'],'label_end':r['label_end'],'actual':r['y'],'prediction':float(p),'baseline':base,'train_label_end':max(t['label_end'] for t in train)} for r,p in zip(test,pred)]
+        validation.extend(fold_rows)
+        day_ic=[]
+        for day in test_dates:
+            cross=[r for r in fold_rows if r['date']==day]
+            day_ic.append({'date':day,'rank_ic':correlation([r['prediction'] for r in cross],[r['actual'] for r in cross],True),'count':len(cross)})
+        folds.append({'fold':len(folds)+1,'train_start':min(r['date'] for r in train),'train_end':max(r['date'] for r in train),
+            'train_label_end':max(r['label_end'] for r in train),'test_start':test_dates[0],'test_end':test_dates[-1],
+            'test_label_end':max(r['label_end'] for r in test),'train_samples':len(train),'test_samples':len(test),
+            'mae':mean([abs(r['prediction']-r['actual']) for r in fold_rows]),'baseline_mae':mean([abs(r['baseline']-r['actual']) for r in fold_rows]),
+            'mean_rank_ic':mean([r['rank_ic'] for r in day_ic]),'daily_rank_ic':day_ic})
     train=[r for r in pool if r['date']>=dates[-min(252,len(dates))]]
     m=model();m.fit([r['x'] for r in train],[r['y'] for r in train])
     ranks=[]
@@ -86,7 +97,7 @@ def machine_learning(series,end,method):
     return {'asof':end,'method':method,'ranks':sorted(ranks,key=lambda r:r['prediction'],reverse=True),'train_samples':len(train),
         'validation_samples':len(validation),'mae':float(np.mean(abs(actual-pred))),
         'baseline_mae':statistics.mean(abs(r['actual']-r['baseline']) for r in validation),
-        'direction_accuracy':float(np.mean((actual>0)==(pred>0))),'correlation':corr,'validation':validation,
+        'direction_accuracy':float(np.mean((actual>0)==(pred>0))),'correlation':corr,'validation':validation,'folds':folds,
         'caveat':'预测目标为未来 5 个观测日收益，非概率。仅用价格、动量、波动、成交量等 5 项特征；最近 60 个有标签日期分三段滚动验证，每段训练前隔离跨界收益标签，训练窗口最多 252 个日期。预测时用当时已知标签重新训练。相邻标签重叠，样本非独立；固定候选池、有幸存者偏差，无费用收益回测。模型可能不及均值基线，不保证预测有效。'}
 
 def minute_data(code,end,demo=False):
