@@ -1,0 +1,42 @@
+# Local accounts, strategies, queues and journals
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+
+# Runtime data (never publish user records)
+/cache/
+/operations_store/
+/backups/
+/recovered/
+/acceptance_runs/
+/.operations-maintenance
+
+# Logs, Python caches and temporary files
+*.log
+*.tmp
+*.partial
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# Credentials and private configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local packages and machine-specific acceptance output
+*.zip
+/OPERATIONS_ACCEPTANCE.json
+/LIVE_GATE_VALIDATION.json
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
