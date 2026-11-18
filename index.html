@@ -41,6 +41,36 @@
 000001,30
 300750,30</textarea></label><div class="controls"><label>组合起点<input id="portfolioStart" type="date" value="2023-01-01"></label><button id="runPortfolio" class="primary">分析组合</button><button id="exportPortfolio">导出组合结果</button></div><p id="portfolioStatus" class="note" role="status">加载行情后，使用上方查看日期作为组合分析截止日。</p>
 <div id="portfolioResults" hidden><div class="method-grid"><div>组合累计收益<strong id="portfolioReturn">—</strong></div><div>组合最大回撤<strong id="portfolioDrawdown">—</strong></div><div>当前组合年化波动<strong id="portfolioVolatility">—</strong></div><div>当前现金权重<strong id="portfolioCash">—</strong></div></div><canvas id="portfolioChart" role="img" aria-label="固定初始配置组合净值"></canvas><div class="table-scroll"><table><thead><tr><th>股票</th><th>初始权重</th><th>当前权重</th><th>区间收益</th><th>年化波动</th><th>风险贡献占比</th><th>波动倒数参考</th></tr></thead><tbody id="portfolioTable"></tbody></table></div><div class="grid"><div><h3>当前权重分布（%）</h3><canvas id="weightsChart" role="img" aria-label="当前股票和现金权重"></canvas></div><div><h3>风险贡献（%）</h3><canvas id="riskChart" role="img" aria-label="股票风险贡献"></canvas></div></div><h3 style="margin-top:24px">收益相关性</h3><div class="table-scroll"><table id="correlationTable"></table></div><p id="portfolioCaveat" class="note"></p></div></section>
+<section class="panel allocation-lab" data-view="portfolio">
+<div class="section-title"><div><p class="eyebrow">ALLOCATION EVIDENCE</p><h3>组合算法实验 · 滚动样本外对照</h3></div><span class="badge" id="optScope">共享查看日期</span></div>
+<p class="note">比较等权、波动倒数、完整协方差风险平价与受约束最小方差。只做多、完全投资；按上一共同观测日收盘形成权重，后续开盘进行连续股数研究近似。这里的成本为统一情景假设，不是实盘成交收益。</p>
+<label>实验股票池 · 2–8 只沪深普通股票<textarea id="optCodes" rows="2">600519,000001,300750</textarea></label><button id="optUsePortfolio">读取上方组合的股票代码</button><p class="note">实验按算法独立配置权重，上方手工初始权重不参与本实验。</p>
+<div class="wb-form-grid">
+<label>协方差估计<select id="optEstimator"><option value="ledoit_wolf">Ledoit–Wolf 收缩估计</option><option value="sample">样本协方差（含数值正则）</option></select></label>
+<label>训练收益窗口<select id="optWindow"><option value="63">63 个共同观测日</option><option value="126" selected>126 个共同观测日</option><option value="252">252 个共同观测日</option></select></label>
+<label>调仓间隔<select id="optInterval"><option value="5">5 个共同观测日</option><option value="21" selected>21 个共同观测日</option><option value="63">63 个共同观测日</option></select></label>
+<label>样本外起点 · 留空从训练后开始<input id="optStart" type="date"></label>
+<label>单股目标上限 · %<input id="optCap" type="number" value="50" min="12.5" max="100" step="0.5"></label>
+<label>每侧成交成本情景 · bp<input id="optCost" type="number" value="10" min="0" max="100" step="1"></label>
+<label>初始研究资金 · 元<input id="optCapital" type="number" value="300000" min="1000" max="1000000000"></label>
+</div><div class="bt-actions"><button id="optRun" class="primary">运行四算法样本外对照</button><button id="optExport">导出配置、净值与调仓审计</button><span id="optStatus" class="muted" role="status"></span></div>
+<div id="optResults" hidden><div class="wb-kpis" id="optMetrics"></div><div class="wb-charts">
+<section class="wb-chart-card wide"><h3>样本外净值 · 扣除统一成本情景</h3><canvas id="optEquityChart" role="img" aria-label="四种组合算法样本外净值对照"></canvas></section>
+<section class="wb-chart-card wide"><h3>样本外回撤（%）· 包含首次建仓成本</h3><canvas id="optDrawdownChart" role="img" aria-label="四种组合算法样本外回撤"></canvas></section>
+<section class="wb-chart-card wide"><h3>最新收盘研究目标权重（%）· 尚未执行</h3><canvas id="optWeightsChart" role="img" aria-label="四种方法最新目标权重热力图"></canvas></section>
+<section class="wb-chart-card wide"><h3>最新目标的估计风险贡献（%）· 可能为负</h3><canvas id="optRiskChart" role="img" aria-label="基于完整协方差的估计风险贡献热力图"></canvas></section>
+<section class="wb-chart-card"><h3>各次调仓双向换手（%）· 买卖合计</h3><canvas id="optTurnoverChart" role="img" aria-label="四种方法逐次双向调仓换手"></canvas></section>
+<section class="wb-chart-card"><h3>累计成本 / 初始资金（%）</h3><canvas id="optCostChart" role="img" aria-label="四种方法累计调仓成本占初始资金比例"></canvas></section>
+<section class="wb-chart-card wide"><h3>最新训练窗口的估计收益相关性</h3><canvas id="optCorrelationChart" role="img" aria-label="最新训练窗口相关性矩阵"></canvas></section>
+</div><div id="optInsight" class="message"></div>
+<h3>统一口径下的样本外表现</h3><div id="optPerformance" class="table-scroll"></div>
+<details open><summary>最新研究目标：求解状态与风险均分偏差</summary><div id="optTargets" class="table-scroll"></div></details>
+<details><summary>历史账户当前实际漂移权重</summary><div id="optHoldings" class="table-scroll"></div></details>
+<details><summary>训练边界、信号日期与执行日期</summary><div id="optSchedule" class="table-scroll"></div></details>
+<details><summary>逐笔调仓资产、成本与预算核对</summary><div id="optTrades" class="table-scroll"></div></details>
+<details open><summary>算法口径与研究限制</summary><p id="optNotes" class="note"></p></details>
+</div></section>
+
 <section class="panel" data-view="factors ml"><h3>候选股票池</h3><label>2–8 个沪深股票代码，用逗号或空格分隔<textarea id="candidatePool" rows="2">600519,000001,300750,600036,000333,601318</textarea></label><p class="note">与上方查看日期同步。仅对输入股票比较，不自动扩展为全市场股票池。</p></section>
 <section class="panel" data-view="factors"><h3>多因子评分</h3><p class="note">自动获取已披露财报与历史行情。六个因子权重按顺序填写：价值、质量、成长、红利、动量、低波。</p><input id="factorWeights" value="1,1,1,1,1,1" aria-label="六个因子权重"><details><summary>补充有披露日期的财务数据（可选）</summary><p class="note">红利数据缺失时可补充。CSV 表头：code,published_at,bps,roe,growth,dividend_yield；后三项单位为百分数。公告当日保守排除。</p><textarea id="financialCsv" rows="3" placeholder="code,published_at,bps,roe,growth,dividend_yield"></textarea></details><div class="bt-actions"><button class="primary" id="runFactors">计算因子评分</button><button id="exportFactors">导出结果</button><span id="factorsStatus" class="note"></span></div><div id="factorsResult" hidden><h3>因子得分热力图</h3><canvas id="factorChart" aria-label="候选股票因子得分热力图" role="img"></canvas><div id="factorsTable" class="table-scroll"></div><p id="factorsNote" class="note"></p></div></section>
 <section class="panel research-validation" data-view="factors">
@@ -82,4 +112,4 @@
 <div class="panel ops-maintenance"><h3>后台运行、备份与恢复</h3><div class="bt-actions"><button id="opsRefresh">刷新监控</button><button id="opsStartWorker">启动后台进程</button><button id="opsStopWorker">结束后台进程</button><button id="opsScheduler">暂停全部新任务</button><button id="opsBackup">立即创建校验备份</button></div><div class="ops-actions"><label>已有备份<select id="opsBackupSelect"><option value="">请选择备份</option></select></label><button id="opsDownload">下载备份</button><button id="opsRestore">恢复到隔离副本并校验</button></div><p class="note">独立进程在浏览器关闭后继续运行，但电脑关机或断网时不能运行。暂停调度阻止新任务，正在执行的任务会完成；暂停策略会在当前日事务完成后停止推进。恢复演练不覆盖当前数据库，恢复副本默认关闭调度，须核对后再启用。每天首次成功任务后自动备份；有新模拟日事务提交时追加备份。</p><div id="opsRecovery" class="message" hidden></div></div>
 <p id="opsLimitations" class="note"></p></section>
 <section class="panel details" data-view="trend state portfolio factors ml execution text market rotation watch finance events lab paper quality"><details><summary>计算口径与使用限制</summary><p>用过去 N 个交易日的累计收益划分状态：高于正阈值为牛市，低于负阈值为熊市，其余为震荡。回放时逐日重估矩阵，不读取选定日期之后的价格或标签。</p><p>真实日线采用后复权价格，实时卡片显示未复权报价，两者不直接拼接。当天日线最早在北京时间 15:10 后纳入，实际以数据源更新为准。盘中只刷新报价，确认状态使用已收盘日线。</p><p>回测以原始开盘价执行，约束 T+1、最小申报数量、零成交量及近似涨跌停；缺少日线的停牌日无成交。科创板按至少 200 股、之后 1 股递增，其余按 100 股。沪深 A 股卖出印花税按 2023-08-28 前后税率切换，过户费按 2022-04-29 前后切换。佣金与滑点为可修改假设；佣金视为已含其他经手规费。期末不强平，收益含持仓市值。</p><p>历史数据是供应商当前提供的修订版本，不是逐日保存的数据快照，因此回放不等于严格的历史数据版本复原。公共行情接口没有延迟或可用性保证。回测缺少盘口排队、真实公司行动与分红税，结果仅供策略研究，不构成投资建议。</p></details><div class="footer-row"><span id="source">数据源：—</span><button id="export" class="text-button">导出截至当前日的数据 ↓</button></div><small id="fetched">—</small></section>
-</main></div><script src="/modules.js"></script><script src="/advanced.js"></script><script src="/workbench.js"></script><script src="/operations.js"></script><script src="/factor_validation.js"></script><script src="/app.js"></script></body></html>
+</main></div><script src="/modules.js"></script><script src="/advanced.js"></script><script src="/workbench.js"></script><script src="/operations.js"></script><script src="/factor_validation.js"></script><script src="/portfolio_optimization.js"></script><script src="/app.js"></script></body></html>

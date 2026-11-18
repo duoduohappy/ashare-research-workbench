@@ -19,7 +19,7 @@ function renderFactorValidation(d){
  const s=d.summary;
  cards('fvMetrics',[['平均 IC',fvNumber(s.mean_ic)],['平均 Rank IC',fvNumber(s.mean_rank_ic)],['Rank ICIR · 不年化',fvNumber(s.rank_ic_ir)],['有效 Rank IC 日期',s.valid_rank_ic+' / '+s.dates]]);
  $('fvScope').textContent=`${d.factor_name} · ${d.horizon} 个共同观测日 · ${d.codes.length} 只股票`;
- $('fvSummary').textContent=`共同日线  至 （ 日）；信号区间 ${d.signal_start} 至 ${d.signal_end}；已完成标签截止 ${d.label_end}。高低组平均远期收益差 ${s.mean_spread==null?'—':pct(s.mean_spread)}；有效分组 ${s.valid_groups} 日。${d.folds.length?'滚动验证 '+d.folds.length+' 折。':'没有足够有效训练截面形成滚动验证。'}这些是小股票池的描述性证据，不能据此判定策略有效。`;
+ $('fvSummary').textContent=`共同日线 ${d.common_start} 至 ${d.common_end}（${d.common_rows} 日）；信号区间 ${d.signal_start} 至 ${d.signal_end}；已完成标签截止 ${d.label_end}。高低组平均远期收益差 ${s.mean_spread==null?'—':pct(s.mean_spread)}；有效分组 ${s.valid_groups} 日。${d.folds.length?'滚动验证 '+d.folds.length+' 折。':'没有足够有效训练截面形成滚动验证。'}这些是小股票池的描述性证据，不能据此判定策略有效。`;
  tableAt('fvFolds',['折','训练信号区间','训练标签截止','测试信号区间','测试标签截止','训练所选因子 / 方向','训练 Rank IC','测试 Rank IC','测试抽样数','高低组差'],d.folds.map(r=>[r.fold,r.train_start+' → '+r.train_end,r.train_label_end,r.test_start+' → '+r.test_end,r.test_label_end,r.factor_name+(r.direction>0?' 正向':' 反向'),fvNumber(r.train_mean_rank_ic),fvNumber(r.test.mean_rank_ic),r.test.dates,r.test.mean_spread==null?'—':pct(r.test.mean_spread)]));
  tableAt('fvObservations',['信号日','标签截止','IC','Rank IC','低分组','中分组','高分组'],d.observations.map(r=>[r.date,r.label_end,fvNumber(r.ic),fvNumber(r.rank_ic),...[0,1,2].map(j=>r.groups==null?'—':pct(r.groups[j]))]));
  $('fvNotes').textContent=d.notes.join('\n');drawFactorValidation();

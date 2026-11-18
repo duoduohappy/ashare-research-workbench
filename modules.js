@@ -1,7 +1,7 @@
 const moduleInfo={
  trend:{title:'趋势与反转',description:'均线、动量、区间突破与均值偏离，比较策略在历史中的表现。'},
  state:{title:'市场状态识别',description:'马尔可夫状态、转移概率与逐交易日历史回放。'},
- portfolio:{title:'组合配置与风控',description:'研究自选组合的持有表现、相关性与风险集中度。'},
+ portfolio:{title:'组合配置与风控',description:'持有组合、风险贡献与滚动样本外配置；比较等权、风险平价与最小方差。'},
  factors:{title:'多因子选股',description:'需要接入可追溯的财务数据、历史股票池与行业分类。',methods:['价值：估值比较','质量：盈利与现金流','成长：收入及利润增长','红利：股息与分红','动量：相对强弱','低波：收益波动']},
  ml:{title:'机器学习选股',description:'需要补充特征库、滚动训练、样本外检验与数据版本管理。',methods:['线性模型','LightGBM','XGBoost']},
  execution:{title:'交易执行',description:'后续先开发拆单与成交成本模拟；当前不连接券商，不发送委托。',methods:['TWAP：按时间拆单','VWAP：参考成交量分布','POV：控制成交参与率','冰山：分批暴露订单']},
@@ -20,11 +20,13 @@ function switchModule(name){
  if(data){draw();if(activeModule==='trend')drawEquity();if(activeModule==='portfolio')drawPortfolio();}
  drawAdvanced();
  syncFactorValidation();drawFactorValidation();
+ syncOptimization();drawOptimization();
  switchWorkbench();
  switchOperations();
 }
 function invalidatePortfolio(){portfolioSerial++;portfolioResult=null;portfolioAsOf='';$('portfolioResults').hidden=true;$('portfolioStatus').textContent='组合配置或共享数据已变化，请重新分析';}
 function syncModules(frame){
+ syncOptimization();
  $('breakoutValue').textContent=frame.breakout20==null?'历史不足 20 日':frame.breakout20===1?'向上突破':frame.breakout20===-1?'跌破区间':'仍在区间内';
  $('reversionValue').textContent=frame.zscore20==null?'—':frame.zscore20.toFixed(2)+' σ';
  if(portfolioAsOf&&portfolioAsOf!==frame.date)invalidatePortfolio();
