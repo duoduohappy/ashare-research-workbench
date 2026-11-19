@@ -104,9 +104,9 @@ function wbRender(d,kind){
  $('wbInsight').textContent=insight+(d.warnings?.length?' 数据提示：'+d.warnings.join('；'):'');$('wbInsight').className='message'+(d.warnings?.length?' warning':'');drawWorkbench();
 }
 
-function wbDrawLine(id,series){
+function wbDrawLine(id,series,zeroFloor=false){
  const {c,w,h}=canvasSetup(id),pts=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.value));if(!pts.length){c.fillStyle='#8793a5';c.fillText('没有可用观测',25,55);return;}
- const legendCols=w<500?2:4,left=65,right=w-20,top=28+Math.ceil(series.length/legendCols)*14,bottom=h-30;let lo=Math.min(...pts.map(p=>p.value)),hi=Math.max(...pts.map(p=>p.value));const pad=(hi-lo)*.12||1;lo-=pad;hi+=pad;
+ const legendCols=w<500?2:4,left=65,right=w-20,top=28+Math.ceil(series.length/legendCols)*14,bottom=h-30;let lo=Math.min(...pts.map(p=>p.value)),hi=Math.max(...pts.map(p=>p.value));const pad=(hi-lo)*.12||1;lo=zeroFloor?0:lo-pad;hi=zeroFloor?Math.ceil(hi+pad):hi+pad;
  const numeric=pts.every(p=>/^[-+]?\d+$/.test(p.date)),dates=[...new Set(pts.map(p=>p.date))].sort((a,b)=>numeric?Number(a)-Number(b):a.localeCompare(b));const map=new Map(dates.map((d,i)=>[d,i]));
  c.font='10px Segoe UI';for(let i=0;i<4;i++){const y=top+(bottom-top)*i/3;c.strokeStyle='#e9edf2';c.beginPath();c.moveTo(left,y);c.lineTo(right,y);c.stroke();c.fillStyle='#8793a5';c.fillText(wbFmt(hi-(hi-lo)*i/3),2,y+4);}
  const palette=['#365ce6','#dc9e37','#299d81','#ac74cb','#d25764','#2babc1','#8793a5','#8c9444'];

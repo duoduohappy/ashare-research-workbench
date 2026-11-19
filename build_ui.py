@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
-SOURCES=('ui/advanced_core.js','factor_validation.js','portfolio_optimization.js','regime_research.js','strategy_validation.js','research_evidence.js')
+SOURCES=('ui/advanced_core.js','factor_validation.js','portfolio_optimization.js','regime_research.js','strategy_validation.js','research_evidence.js','point_in_time.js')
 
 
 def render():

@@ -22,6 +22,7 @@ from portfolio_optimization import portfolio_experiment
 from regime_research import regime_experiment
 from strategy_validation import strategy_validation
 from research_evidence import EvidenceStore
+from point_in_time import dispatch as pit_dispatch
 import extensions as ext
 from workbench_api import dispatch as workbench_dispatch
 from ops_engine import Runtime
@@ -171,6 +172,8 @@ class Handler(BaseHTTPRequestHandler):
             path=urllib.parse.urlparse(self.path).path
             if path=='/api/ops':
                 self.send_json(ops_dispatch(body,Runtime(DATA_ROOT,quote_loader=quote)));return
+            if path=='/api/point-in-time':
+                self.send_json(pit_dispatch(body,DATA_ROOT));return
             if path=='/api/research-evidence':
                 store=EvidenceStore(DATA_ROOT);action=body.get('action','list')
                 if action=='list':result=store.inventory()
@@ -300,7 +303,7 @@ class Handler(BaseHTTPRequestHandler):
         get=lambda key, default='': args.get(key,[default])[0]
         try:
             if parsed.path=='/api/version':
-                self.send_json({'api_revision':3,'features':['factor-validation','portfolio-experiment','regime-research','strategy-validation','research-evidence']})
+                self.send_json({'api_revision':4,'features':['factor-validation','portfolio-experiment','regime-research','strategy-validation','research-evidence','point-in-time']})
             elif parsed.path=='/api/ops/backup-download':
                 path=backup_path(Runtime(DATA_ROOT),get('id'));body=path.read_bytes()
                 self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Disposition','attachment; filename="'+path.name+'"');self.end_headers();self.wfile.write(body)

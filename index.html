@@ -134,6 +134,26 @@
 <section class="wb-chart-card wide"><h3>额外一个观测日信号延迟：单折收益（%）</h3><canvas id="svDelayChart" role="img" aria-label="基础信号与额外一日信号延迟的独立测试窗收益"></canvas></section>
 </div><div id="svInsight" class="message"></div><h3>训练选择与独立测试记录</h3><div id="svFoldTable" class="table-scroll"></div><details><summary>成本压力数值与同成本基线</summary><div id="svStressTable" class="table-scroll"></div></details><details><summary>基础情景所选策略的信号与成交记录</summary><div id="svTrades" class="table-scroll"></div></details><details open><summary>分窗、成本、重采样假设与使用限制</summary><p id="svNotes" class="note"></p></details></div></section>
 
+<section class="panel pit-lab" data-view="quality lab" id="pitPanel">
+<div class="section-title"><div><p class="eyebrow">HISTORICAL UNIVERSE · POINT IN TIME · EXECUTION</p><h3>历史时点与严格成交研究</h3></div><span class="badge">独立历史数据包</span></div>
+<p class="note">按上市存续区间恢复股票池，保留退市历史样本；财报按披露与可用时间选择原始或更正版本。独立于上方共享行情日期，使用下方截止日。当前公开行情不会自动生成完整历史股票池，请先体验合成数据或导入有来源的历史数据包。</p>
+<div class="bt-actions"><button id="pitDemo">载入合成历史样本</button><label>历史数据包 JSON<input id="pitFile" type="file" accept=".json,application/json"></label><button id="pitImport">导入并核验</button><button id="pitExportData">导出数据包 / 示例格式</button></div>
+<div class="wb-form-grid"><label>本机已保存数据包<select id="pitSaved"><option value="">点击刷新列表查看</option></select></label><div class="bt-actions"><button id="pitRefresh">刷新数据包列表</button><button id="pitOpen">打开所选数据包</button></div></div>
+<div class="wb-form-grid"><label>独立研究截止日<input id="pitEnd" type="date"></label><label>排序因子<select id="pitFactor"><option value="momentum">历史价格动量</option><option value="roe">时点财报 ROE</option></select></label><label>动量回看交易日<input id="pitLookback" type="number" min="5" max="120" value="20"></label><label>调仓间隔交易日<input id="pitInterval" type="number" min="1" max="63" value="10"></label><label>最多持股数<input id="pitTop" type="number" min="1" max="30" value="2"></label><label>研究资金 元<input id="pitCapital" type="number" min="10000" max="100000000" value="300000"></label><label>开盘集合竞价参与率 %<input id="pitParticipation" type="number" min="0.01" max="10" step="0.1" value="2"></label><label>每侧滑点 ‰<input id="pitSlippage" type="number" min="0" max="30" step="0.1" value="1"></label></div>
+<div class="bt-actions"><button id="pitAudit">按截止日核验历史池与财报</button><button class="primary" id="pitRun">运行严格成交研究</button><button id="pitReplay" disabled>复算当前结果</button><button id="pitExportRun" disabled>导出研究与委托记录</button></div>
+<div id="pitStatus" class="message" role="status">先载入合成样本或导入历史数据包；无数据时不会套用当前股票池。</div>
+<div id="pitResults" hidden><div class="wb-kpis" id="pitCards"></div><p id="pitSource" class="note"></p><div class="wb-charts">
+<section class="wb-chart-card"><h3>历史存续池、已退出样本与 ST 数量</h3><canvas id="pitPoolChart" role="img" aria-label="历史股票池数量变化"></canvas></section>
+<section class="wb-chart-card"><h3>财报可用性与停牌数量</h3><canvas id="pitFinancialChart" role="img" aria-label="历史财报可用覆盖与停牌数量"></canvas></section>
+<section class="wb-chart-card wide"><h3>最近 90 个交易日状态 · 0 未上市或已退出 / 1 停牌 / 2 有日线</h3><canvas id="pitCoverageChart" role="img" aria-label="历史股票池日线与停牌覆盖"></canvas></section></div>
+<details><summary>截止日采用的财报原始 / 更正版本</summary><div id="pitVersions" class="table-scroll"></div></details><p id="pitNote" class="note warning-note"></p>
+<div id="pitTradeResults" hidden><div id="pitTradeCards" class="wb-kpis"></div><div class="wb-charts">
+<section class="wb-chart-card"><h3>费用后连续账户研究净值</h3><canvas id="pitNavChart" role="img" aria-label="严格成交连续账户净值"></canvas></section>
+<section class="wb-chart-card"><h3>账户回撤 %</h3><canvas id="pitDrawdownChart" role="img" aria-label="严格成交账户回撤"></canvas></section>
+<section class="wb-chart-card"><h3>累计交易费用 元</h3><canvas id="pitCostChart" role="img" aria-label="累计费用"></canvas></section>
+<section class="wb-chart-card"><h3>成交、部分成交与阻断原因 · 委托数</h3><canvas id="pitOrderChart" role="img" aria-label="委托结果分布"></canvas></section></div>
+<details><summary>逐次历史股票池、排序与财报版本</summary><div id="pitSelections" class="table-scroll"></div></details><details><summary>逐笔委托、容量、费用与拒绝原因</summary><div id="pitOrders" class="table-scroll"></div></details><details><summary>退市退出现金记录 · actual 为来源声明 / scenario 为处置情景</summary><div id="pitSettlements" class="table-scroll"></div></details><p id="pitAssumptions" class="note"></p></div></div>
+</section>
 <section class="panel evidence-lab" data-view="quality">
 <div class="section-title"><div><p class="eyebrow">RESEARCH EVIDENCE</p><h3>研究证据库 · 数据版本与离线复现</h3></div><span class="badge">本机保存 · 不启用交易</span></div>
 <p class="note">冻结当前可得的规范化日线，再运行因子、组合、状态或策略验收。记录参数、结果及计算环境指纹；复算不重新请求行情，也不执行存档源码。记录与快照的日期独立于共享回放日。清单每类最多显示最近 100 条，摘要数量按该清单统计。</p>

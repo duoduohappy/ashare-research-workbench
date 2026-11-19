@@ -9,6 +9,7 @@
 /cache/
 /operations_store/
 /research_evidence/
+/point_in_time/
 /backups/
 /recovered/
 /acceptance_runs/

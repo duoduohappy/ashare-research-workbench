@@ -26,6 +26,7 @@ function switchModule(name){
  switchEvidence();drawEvidence();
  switchWorkbench();
  switchOperations();
+ drawPIT();
 }
 function invalidatePortfolio(){portfolioSerial++;portfolioResult=null;portfolioAsOf='';$('portfolioResults').hidden=true;$('portfolioStatus').textContent='组合配置或共享数据已变化，请重新分析';}
 function syncModules(frame){
